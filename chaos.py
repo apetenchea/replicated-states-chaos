@@ -175,16 +175,19 @@ def get_snapshot(last_applied):
 
 
 def reconstruct_state(initial_state, operations):
-    idx = set()
+    idx = list()
     for o in operations:
-        idx.add(o[0])
+        idx.append(o[0])
+        if len(idx) > 1 and idx[-1] != idx[-2] + 1:
+            logging.error(f'During entry {idx[-1]}, previous recorded entry is {idx[-2]}')
         payload = o[1]
         key = list(payload.keys())[0]
         if initial_state[key] != payload[key]['oldValue']:
             logging.error(f'During entry {o[0]}, previous state for {key} was {initial_state[key]},'
-                          f'but {payload[key]["oldValue"]} was used as old value. New value applied: {payload[key]["newValue"]}')
+                          f'but {payload[key]["oldValue"]} was used as old value. New value applied:'
+                          f'{payload[key]["newValue"]}')
         initial_state[key] = payload[key]['newValue']
-    assert(len(idx) == len(operations))
+    assert(set(idx) == len(operations))
     return initial_state
 
 
