@@ -189,6 +189,15 @@ def get_log_tail():
     return tail
 
 
+def get_log_entries():
+    r = httpx.get(f'{coord_url()}/{REPLICATED_LOG_URL}/head?limit=1000000')
+    if r.is_error:
+        logging.debug(f'Log head resulted in status code {r.status_code}, text {r.text}')
+        return None
+    head = r.json()['result']
+    return head
+
+
 def rolling_tail(running, log_tail):
     while running.value:
         tail = get_log_tail() or []
