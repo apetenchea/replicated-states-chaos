@@ -39,6 +39,8 @@ def resume_all():
 
 
 def create_prototype_state():
+    endpoints = get_endpoints()
+
     state_type = 'prototype'
     config = {
         'id': STATE_ID,
@@ -49,7 +51,8 @@ def create_prototype_state():
         },
         'properties': {
             "implementation": {"type": state_type}
-        }
+        },
+        'participants': {p: {} for p in list(endpoints.keys())[:RC]},
     }
     r = httpx.post(f'{coord_url()}/{REPLICATED_STATE_URL}', json=config)
     r.raise_for_status()
