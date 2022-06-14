@@ -46,7 +46,6 @@ def create_prototype_state():
             'waitForSync': False,
             'writeConcern': WC,
             'softWriteConcern': WC,
-            'replicationFactor': RC,
         },
         'properties': {
             "implementation": {"type": state_type}
