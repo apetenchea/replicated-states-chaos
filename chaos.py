@@ -220,7 +220,10 @@ def reconstruct_state_locally(initial_state, operations):
     for o in operations:
         idx.append(o[0])
         if len(idx) > 1 and idx[-1] != idx[-2] + 1:
-            logging.error(f'During entry {idx[-1]}, previous recorded entry is {idx[-2]}')
+            if idx[-1] == idx[-2] + 2:
+                logging.error(f'During entry {idx[-1]}, previous recorded entry is {idx[-2]}, most probably a meta-entry')
+            else:
+                logging.error(f'During entry {idx[-1]}, previous recorded entry is {idx[-2]}')
         payload = o[1]
         key = list(payload.keys())[0]
         if initial_state[key] != payload[key]['oldValue']:
@@ -243,9 +246,9 @@ def reconstruct_state_from_log(entries):
         try:
             payload = e['payload']
         except KeyError:
+            idx = e['logIndex']
             continue
-        if idx:
-            assert(e['logIndex'] == idx + 1)
+        assert(e['logIndex'] == idx + 1)
         idx = e['logIndex']
 
         op_type = payload[1]['type']
