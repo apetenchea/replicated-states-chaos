@@ -1,6 +1,8 @@
 Replicated States Stress Testing for ArangoDB
 ============================================
 
+**Replicated states HTTP API might have changed**
+
 In order to run stress testing on the prototype replicated state,
 start a cluster with at least 12 DB servers and 3 coordinators (recommended).  
 
