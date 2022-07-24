@@ -10,4 +10,4 @@ Run `chaos.py` and follow the logs in the console.
 The files `actual.json` and `expected.json` represent the actual snapshot gathered form the coordinator and the expected final
 state which was reconstructed.  
 
-There can be a lot of output produce, hence you might want to redirect everything to a file: `python chaos.py &> log.txt`
+There can be a lot of output produced, hence you might want to redirect everything to a file: `python chaos.py &> log.txt`
