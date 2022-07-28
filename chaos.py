@@ -327,7 +327,7 @@ def dump_log():
     if r.is_error:
         logging.error(f"Could not dump replicated log {r}")
         return
-    with open("log.json", "w") as f:
+    with open("replicated-log.json", "w") as f:
         json.dump(r.json()["result"], f)
 
 
