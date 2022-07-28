@@ -10,8 +10,8 @@ from multiprocessing import Pool, Process
 
 
 STATE_ID = 12
-WC = 3
-RC = 8
+WC = 3  # write concern
+RC = 8  # number of servers being used to run the replicated state
 COORD_URL = ['http://localhost:8530', 'http://localhost:8531', 'http://localhost:8532']
 REPLICATED_LOG_URL = f'_api/log/{STATE_ID}'
 REPLICATED_STATE_URL = '_api/replicated-state'
@@ -139,25 +139,33 @@ def run_participants_chaos():
             idx = random.randint(0, len(used) - 1)
             used[idx].touch()
             time.sleep(5)
-        elif op == 1 and len(unused):
-            new_idx = random.randint(0, len(unused) - 1)
-            new_participant = unused[new_idx]
-            new_participant.alive()
-            old_idx = random.randint(0, len(used) - 1)
-            old_participant = used[old_idx]
-            while True:
-                url = f'{coord_url()}/{REPLICATED_STATE_URL}/{STATE_ID}/participant/{old_participant.name}/' \
-                      f'replace-with/{new_participant.name}'
-                r = httpx.post(url)
-                if r.is_error:
-                    logging.debug(f'Replacing {old_participant.name} with {new_participant.name}'
-                                  f'returned {r.status_code}, text {r.text}')
-                    time.sleep(1)
-                    continue
-                logging.info(f'exchanged {old_participant.name} {new_participant.name}')
-                unused[new_idx], used[old_idx] = used[old_idx], unused[new_idx]
-                time.sleep(5)
-                break
+        elif op == 1:
+            if len(unused):
+                new_idx = random.randint(0, len(unused) - 1)
+                new_participant = unused[new_idx]
+                new_participant.alive()
+                old_idx = random.randint(0, len(used) - 1)
+                old_participant = used[old_idx]
+                while True:
+                    url = f'{coord_url()}/{REPLICATED_STATE_URL}/{STATE_ID}/participant/{old_participant.name}/' \
+                          f'replace-with/{new_participant.name}'
+                    r = httpx.post(url)
+                    if r.is_error:
+                        logging.debug(f'Replacing {old_participant.name} with {new_participant.name}'
+                                      f'returned {r.status_code}, text {r.text}')
+                        time.sleep(1)
+                        continue
+                    logging.info(f'exchanged {old_participant.name} {new_participant.name}')
+                    unused[new_idx], used[old_idx] = used[old_idx], unused[new_idx]
+                    time.sleep(5)
+                    break
+            else:
+                # We don't have enough servers to continue and no servers to replace the stopped ones.
+                # In this case we try to resume one that's currently being in use.
+                for p in used:
+                    if not p.is_running:
+                        p.touch()
+                        break
         else:
             # nop
             pass
@@ -290,7 +298,7 @@ class Chaos:
             if previous:
                 diff = len(old_value) - len(previous)
                 if diff and previous + self.name * diff == old_value:
-                    # We already had at least successful cmp-ex, but didn't get the answer back
+                    # We already had at least one successful cmp-ex, but didn't get the answer back
                     payload[key]['multiple'] = True
             previous = old_value
             r = httpx.put(f'{coord_url()}/{PROTOTYPE_STATE_URL}/cmp-ex', json=payload, timeout=120)
@@ -312,6 +320,15 @@ class Chaos:
             key = str(random.randint(0, entries_range - 1))
             chaos.compare_exchange(key)
         return chaos.op
+
+
+def dump_log():
+    r = httpx.get(f'{coord_url()}/{REPLICATED_LOG_URL}/head?limit=10000000')
+    if r.is_error:
+        logging.error(f"Could not dump replicated log {r}")
+        return
+    with open("log.json", "w") as f:
+        json.dump(r.json()["result"], f)
 
 
 def main(args):
@@ -351,6 +368,7 @@ def main(args):
     if args.kill:
         kill_all()
 
+    dump_log()
     with open('expected.json', 'w') as f:
         json.dump(expected, f)
     with open('actual.json', 'w') as f:
